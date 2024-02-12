@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portfolio-api
+  namespace: portfolio
+  labels:
+    app: portfolio-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: portfolio-api
+  template:
+    metadata:
+      labels:
+        app: portfolio-api
+    spec:
+      containers:
+      - name: portfolio-api
+        image: 856660075226.dkr.ecr.us-west-2.amazonaws.com/portfolio-api:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 6001
+        env:
+        - name: USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: postgres-username
+        - name: PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: postgres-password
+        - name: HOST
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-configmap
+              key: postgres-host
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-configmap
+              key: environment
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-service
+  namespace: portfolio
+spec:
+  selector:
+    app: postgres
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 6001
+      targetPort: 6001
