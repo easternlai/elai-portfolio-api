@@ -5,10 +5,14 @@ const pool = require("./database/connection");
 const { Client } = require("pg");
 
 const app = express();
-const PORT = 6001; // You can choose any available port
+const PORT = 6001;
 const DB_NAME = "portfolio";
 
 app.use(bodyParser.json());
+
+if (process.env.NODE_ENV !== "production") {
+  require("dotenv").config();
+}
 
 //CORS settup
 app.use((req, res, next) => {
@@ -24,9 +28,8 @@ app.use((req, res, next) => {
   }
 });
 
-async function createDatabaseAndTable() {
+async function createTable() {
   try {
-    // Create database if it doesn't exist
     const client = await pool.connect();
 
     await client.query(`
@@ -38,17 +41,28 @@ async function createDatabaseAndTable() {
       );
     `);
 
-    console.log("Database and table created successfully");
+    console.log("Table created successfully");
     client.release();
   } catch (error) {
-    console.error("Error creating database and table:", error);
+    console.error("Error creating table:", error);
   }
 }
 
-// Middleware to create database and table on server startup
 app.use(async (req, res, next) => {
-  await createDatabaseAndTable();
+  await createTable();
   next();
+});
+
+app.get("/api/contact", async (req, res) => {
+  try {
+    // Insert data into the table
+    const result = await pool.query("SELECT * from contacts");
+
+    return res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("Error inserting form data:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
 });
 
 app.post("/api/contact", async (req, res) => {
@@ -62,10 +76,10 @@ app.post("/api/contact", async (req, res) => {
     );
 
     console.log("Form data inserted:", result.rows[0]);
-    res.status(200).json({ message: "Form submitted successfully" });
+    return res.status(200).json({ message: "Form submitted successfully" });
   } catch (error) {
     console.error("Error inserting form data:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 });
 
